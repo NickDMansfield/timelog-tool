@@ -54,7 +54,14 @@ xlsx.parseFileAsync(
           timeSplitMinutes: (endTime - startTime) / 60000,
           taskUploadId: sheetData[currentRowIndex][9],
         };
-        postRow(parsedRow);
+        if (
+          parsedRow.endTime &&
+          parsedRow.startTime &&
+          parsedRow.taskTitle &&
+          parsedRow.timeSplitMinutes
+        ) {
+          postRow(parsedRow);
+        }
         if (existingRowTaskRecords) {
           existingRowTaskRecords.push(parsedRow);
         } else {
@@ -116,7 +123,8 @@ xlsx.parseFileAsync(
           headers: {
             "User-Agent": "efficiency bot",
             "Harvest-Account-ID": "1356984",
-            Authorization: "your bearer",
+            Authorization:
+              "Bearer 2839898.pt.NGdsmSna_8KIliNdDO8AlkVTmjUKrDy8VnH9sEz6X17jYfYdyxbCg1l23IJY6r4nyooRMtBEwPwZzKS2piVouQ",
           },
           json: rowToPost,
         },
