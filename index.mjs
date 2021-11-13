@@ -35,49 +35,23 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
   const allFetchedRows = {};
   _.map(sheetNames, (sheetname) => {
     const sheet = _.find(wbData, { name: sheetname });
-    const sheetData = sheet.data;
-    let currentRowIndex = 1;
-    let taskTitle;
-    do {
-      taskTitle = sheetData[currentRowIndex][0];
-      const existingRowTaskRecords = allFetchedRows[taskTitle];
-      const startTime = excelDate(sheetData[currentRowIndex][1]);
-      const endTime = excelDate(sheetData[currentRowIndex][2]);
-      const parsedRow = {
-        taskTitle,
-        startTime,
-        endTime,
-        taskDescription: sheetData[currentRowIndex][3],
-        timeSplitMinutes: (endTime - startTime) / 60000,
-        taskUploadId: sheetData[currentRowIndex][9],
-      };
-      if (
-        parsedRow.endTime &&
-        parsedRow.startTime &&
-        parsedRow.taskTitle &&
-        parsedRow.timeSplitMinutes &&
-        !parsedRow.taskUploadId
-      ) {
-        postRow(parsedRow, sheetData[currentRowIndex]);
-      }
-      if (existingRowTaskRecords) {
-        existingRowTaskRecords.push(parsedRow);
-      } else {
-        allFetchedRows[taskTitle] = [parsedRow];
-      }
-      currentRowIndex++;
-    } while (taskTitle);
+    processSheet(sheet);
   });
 
-  console.log(JSON.stringify(wbData));
-  /*
-  xlsx.buildAsync(wbData, null, (error, xlsxBuffer) => {
-    console.log(xlsxBuffer);
-    fs.writeFile(process.cwd() + "/zzz" + program.source, xlsxBuffer, () => {
-      console.log("done");
+  // because I am a lazy sob
+  setInterval(function () {
+    console.log(JSON.stringify(wbData));
+    xlsx.buildAsync(wbData, null, (error, xlsxBuffer) => {
+      console.log(xlsxBuffer);
+      // TODO: Replace this with filepath when the formatting is fixed
+      fs.writeFile(process.cwd() + "/zzz" + program.source, xlsxBuffer, () => {
+        console.log("done");
+        process.exit();
+      });
     });
-  });
-  */
+  }, 10000);
+  /*
+   */
 
   // console.log(allFetchedRows);
 
@@ -93,9 +67,20 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
   //  console.log(origRows);
   //console.log(origRows.length);
 
+  function processSheet(sheet) {
+    const sheetData = sheet.data;
+    let currentRowIndex = 1;
+    let taskTitle;
+    do {
+      const row = sheetData[currentRowIndex];
+      taskTitle = row[0];
+      processRow(row);
+      currentRowIndex++;
+    } while (taskTitle);
+  }
+
   function processRow(row) {
-    taskTitle = row[0];
-    console.log(taskTitle);
+    const taskTitle = row[0];
     const existingRowTaskRecords = allFetchedRows[taskTitle];
     const startTime = excelDate(row[1]);
     const endTime = excelDate(row[2]);
@@ -105,17 +90,24 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
       endTime,
       taskDescription: row[3],
       timeSplitMinutes: (endTime - startTime) / 60000,
-      taskUploadId: row[8],
+      taskUploadId: row[9],
     };
-    postRow(parsedRow, rawRow);
-    if (parsedRow.notes !== "null: null") {
-      if (existingRowTaskRecords) {
-        existingRowTaskRecords.push(parsedRow);
-      } else {
-        allFetchedRows[taskTitle] = [parsedRow];
-      }
+    if (
+      parsedRow.endTime &&
+      parsedRow.startTime &&
+      parsedRow.taskTitle &&
+      parsedRow.timeSplitMinutes &&
+      !parsedRow.taskUploadId
+    ) {
+      postRow(parsedRow, row);
+    }
+    if (existingRowTaskRecords) {
+      existingRowTaskRecords.push(parsedRow);
+    } else {
+      allFetchedRows[taskTitle] = [parsedRow];
     }
   }
+
   function postRow(X, rawRow) {
     const rowToPost = {
       hours: (X.timeSplitMinutes / 60).toString(),
@@ -139,7 +131,7 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
       },
       function (error, response, body) {
         if (!error) {
-          X.taskUploadId = "asd";
+          X.taskUploadId = body.id.toString();
           while (rawRow.length < 10) {
             rawRow.push("");
           }
@@ -151,4 +143,3 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
     );
   }
 });
-// If it succeeds, save the upload Id onto the file
