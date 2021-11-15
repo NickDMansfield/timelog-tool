@@ -69,21 +69,25 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
 
   function processSheet(sheet) {
     const sheetData = sheet.data;
+    const sheetDate = sheetData[0][6];
     let currentRowIndex = 1;
     let taskTitle;
     do {
       const row = sheetData[currentRowIndex];
       taskTitle = row[0];
-      processRow(row);
+      processRow(row, sheetDate);
       currentRowIndex++;
     } while (taskTitle);
   }
 
-  function processRow(row) {
+  function processRow(row, sheetDate = null) {
     const taskTitle = row[0];
     const existingRowTaskRecords = allFetchedRows[taskTitle];
     const startTime = excelDate(row[1]);
     const endTime = excelDate(row[2]);
+    let taskDate = sheetDate ? excelDate(sheetDate) : null;
+    // Because the plain date loads it up as the next day
+    taskDate = new Date(taskDate.valueOf() - 30000);
     const parsedRow = {
       taskTitle,
       startTime,
@@ -91,6 +95,7 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
       taskDescription: row[3],
       timeSplitMinutes: (endTime - startTime) / 60000,
       taskUploadId: row[9],
+      taskDate,
     };
     if (
       parsedRow.endTime &&
@@ -112,10 +117,10 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
     const rowToPost = {
       hours: (X.timeSplitMinutes / 60).toString(),
       notes: X.taskTitle + ": " + X.taskDescription,
-      project_id: 30547106,
-      spent_date: "2021-11-12",
-      task_id: 15357383,
-      user_id: 3992099,
+      project_id: null,
+      spent_date: X.taskDate,
+      task_id: null,
+      user_id: null,
     };
     // console.log(rowToPost);
     request.post(
@@ -123,22 +128,21 @@ xlsx.parseFileAsync(filePath, {}, (workbookData) => {
         url: "https://api.harvestapp.com/api/v2/time_entries",
         headers: {
           "User-Agent": "efficiency bot",
-          "Harvest-Account-ID": "1356984",
-          Authorization:
-            "Bearer 2839898.pt.NGdsmSna_8KIliNdDO8AlkVTmjUKrDy8VnH9sEz6X17jYfYdyxbCg1l23IJY6r4nyooRMtBEwPwZzKS2piVouQ",
+          "Harvest-Account-ID": "blah",
+          Authorization: "Bearer 2839dsa898.pt.dssad",
         },
         json: rowToPost,
       },
       function (error, response, body) {
         if (!error) {
-          X.taskUploadId = body.id.toString();
+          X.taskUploadId = body.id;
           while (rawRow.length < 10) {
             rawRow.push("");
           }
           rawRow[9] = X.taskUploadId;
+        } else {
+          console.log(error);
         }
-        //   console.log(X);
-        console.log(rawRow);
       }
     );
   }
