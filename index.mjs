@@ -20,6 +20,7 @@ program
 // Load settings
 
 let settings = {};
+const dateNotes = {};
 if (program.settingsJSON) {
   try {
     fs.readFile(
@@ -92,14 +93,17 @@ if (program.settingsJSON) {
               const existingRowTaskRecords = allFetchedRows[taskTitle];
               const startTime = excelDate(row[1]);
               const endTime = excelDate(row[2]);
+              const taskDescription = row[3];
               let taskDate = sheetDate ? excelDate(sheetDate) : null;
               // Because the plain date loads it up as the next day
               taskDate = new Date(taskDate.valueOf() - 30000);
+              dateNotes[taskDate.toDateString()] +=
+                taskTitle + ":" + taskDescription + "\r\n";
               const parsedRow = {
                 taskTitle,
                 startTime,
                 endTime,
-                taskDescription: row[3],
+                taskDescription,
                 timeSplitMinutes: (endTime - startTime) / 60000,
                 taskUploadId: row[9],
                 taskDate,
@@ -111,7 +115,9 @@ if (program.settingsJSON) {
                 parsedRow.timeSplitMinutes &&
                 !parsedRow.taskUploadId
               ) {
-                postRow(parsedRow, row, accountSettings);
+                if (!isRowExcluded(parsedRow, accountSettings)) {
+                  postRow(parsedRow, row, accountSettings);
+                }
               }
               if (existingRowTaskRecords) {
                 existingRowTaskRecords.push(parsedRow);
@@ -161,4 +167,33 @@ if (program.settingsJSON) {
   } catch (exc) {
     console.log(exc);
   }
+}
+function isRowExcluded(parsedRow, accountSettings) {
+  // Check for excluded ticket names
+  if (accountSettings.excludedTicketNames) {
+    for (let ticketNameToExclude of accountSettings.excludedTicketNames) {
+      if (ticketNameToExclude.length >= 0) {
+        let stringToSearch = ticketNameToExclude;
+        let stringAsteriskIndex = stringToSearch.indexOf("*");
+        let endIndex =
+          stringToSearch.length > 0 ? stringToSearch.length - 1 : 0;
+        if (stringAsteriskIndex >= 0) {
+          // here we check for wildcard matches
+          endIndex = stringAsteriskIndex;
+        }
+        stringToSearch = stringToSearch.substring(0, endIndex);
+        console.log("string:" + stringToSearch);
+        console.log(parsedRow.taskTitle);
+        if (
+          stringToSearch.length > 0 &&
+          parsedRow.taskTitle
+            .toLowerCase()
+            .indexOf(stringToSearch.toLowerCase()) >= 0
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
