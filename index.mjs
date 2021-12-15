@@ -20,7 +20,6 @@ program
 // Load settings
 
 let settings = {};
-const dateNotes = {};
 if (program.settingsJSON) {
   try {
     fs.readFile(
@@ -37,6 +36,9 @@ if (program.settingsJSON) {
           //console.log(JSON.stringify(wbData, 0, 2));
           //   console.log(workbookData);
           _.map(settings.accountsToUse, (mappedAccountSetting) => {
+            const dateNotes = {};
+            const dateStrings = [];
+            const workRowsByDate = {};
             const sheetNames = _.map(wbData, "name");
 
             // Grab all the rows in each worksheet
@@ -45,6 +47,26 @@ if (program.settingsJSON) {
               const sheet = _.find(wbData, { name: sheetname });
               processSheet(sheet, mappedAccountSetting);
             });
+
+            // Since lumped accounts didn't post earlier, we handle them now
+            if (useLumpSetting(mappedAccountSetting)) {
+              _.map(dateStrings, (dateString) => {
+                const rowsToProcess = workRowsByDate[dateString];
+                // Combine the entire day into a single row
+                const rowToPost = makePostableRow(
+                  mappedAccountSetting.lumpSettings.title || "General Work",
+                  roundWorkMinutes(
+                    _.sum(_.map(rowsToProcess, (rtp) => rtp.timeSplitMinutes)),
+                    mappedAccountSetting.lumpSettings.hours * 60
+                  ),
+                  "\r\n" + dateNotes[dateString],
+                  rowsToProcess[0].taskDate,
+                  mappedAccountSetting
+                );
+                //  console.log(rowToPost);
+                postRow(rowToPost, null, mappedAccountSetting);
+              });
+            }
 
             // because I am a lazy sob
             setInterval(function () {
@@ -97,8 +119,6 @@ if (program.settingsJSON) {
               let taskDate = sheetDate ? excelDate(sheetDate) : null;
               // Because the plain date loads it up as the next day
               taskDate = new Date(taskDate.valueOf() - 30000);
-              dateNotes[taskDate.toDateString()] +=
-                taskTitle + ":" + taskDescription + "\r\n";
               const parsedRow = {
                 taskTitle,
                 startTime,
@@ -116,7 +136,28 @@ if (program.settingsJSON) {
                 !parsedRow.taskUploadId
               ) {
                 if (!isRowExcluded(parsedRow, accountSettings)) {
-                  postRow(parsedRow, row, accountSettings);
+                  // If there is a lump setting, we don't want itemized rows. Instead we want a single lumped count
+                  const dateString = taskDate.toDateString();
+                  if (dateStrings.indexOf(dateString) < 0) {
+                    dateStrings.push(dateString);
+                  }
+                  if (
+                    dateNotes[dateString] === null ||
+                    dateNotes[dateString] === undefined
+                  ) {
+                    dateNotes[dateString] = "";
+                  }
+                  dateNotes[dateString] +=
+                    taskTitle + ":" + taskDescription + "\r\n";
+                  if (useLumpSetting(accountSettings)) {
+                    if (workRowsByDate[dateString]) {
+                      workRowsByDate[dateString].push(parsedRow);
+                    } else {
+                      workRowsByDate[dateString] = [parsedRow];
+                    }
+                  } else {
+                    postRow(parsedRow, row, accountSettings);
+                  }
                 }
               }
               if (existingRowTaskRecords) {
@@ -127,15 +168,6 @@ if (program.settingsJSON) {
             }
 
             function postRow(X, rawRow, accountSettings) {
-              const rowToPost = {
-                hours: (X.timeSplitMinutes / 60).toString(),
-                notes: X.taskTitle + ": " + X.taskDescription,
-                project_id: accountSettings.projectId,
-                spent_date: X.taskDate,
-                task_id: accountSettings.taskId,
-                user_id: accountSettings.userId,
-              };
-              // console.log(rowToPost);
               request.post(
                 {
                   url: "https://api.harvestapp.com/api/v2/time_entries",
@@ -144,16 +176,18 @@ if (program.settingsJSON) {
                     "Harvest-Account-ID": `${accountSettings.accountId}`,
                     Authorization: accountSettings.authorization,
                   },
-                  json: rowToPost,
+                  json: X,
                 },
                 function (error, response, body) {
-                  console.log(response);
+                  //  console.log(response);
                   if (!error) {
                     X.taskUploadId = body.id;
-                    while (rawRow.length < 10) {
-                      rawRow.push("");
+                    if (rawRow != null) {
+                      while (rawRow.length < 10) {
+                        rawRow.push("");
+                      }
+                      rawRow[9] = X.taskUploadId;
                     }
-                    rawRow[9] = X.taskUploadId;
                   } else {
                     console.log(error);
                   }
@@ -168,6 +202,37 @@ if (program.settingsJSON) {
     console.log(exc);
   }
 }
+
+function roundWorkMinutes(_minutes, _lumpSizeInMinutes) {
+  return Math.round(_minutes / _lumpSizeInMinutes) * _lumpSizeInMinutes;
+}
+
+function makePostableRow(
+  taskTitle,
+  timeSplitMinutes,
+  taskDescription,
+  taskDate,
+  accountSettings
+) {
+  const rowToPost = {
+    hours: (timeSplitMinutes / 60).toString(),
+    notes: taskTitle + ": " + taskDescription,
+    project_id: accountSettings.projectId,
+    spent_date: taskDate,
+    task_id: accountSettings.taskId,
+    user_id: accountSettings.userId,
+  };
+  return rowToPost;
+}
+
+function useLumpSetting(accountSettings) {
+  return (
+    accountSettings.lumpSettings &&
+    accountSettings.lumpSettings.hours &&
+    accountSettings.lumpSettings.hours > 0
+  );
+}
+
 function isRowExcluded(parsedRow, accountSettings) {
   // Check for excluded ticket names
   if (accountSettings.excludedTicketNames) {
