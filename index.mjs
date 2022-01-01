@@ -1,4 +1,5 @@
-#! /usr/bin/env node
+#!/bin/sh
+":"; //# comment; exec /usr/bin/env node --experimental-modules "$0" "$@"
 import xlsx from "async-xlsx";
 import program from "commander";
 import _ from "lodash";
