@@ -49,16 +49,24 @@ if (program.settingsJSON) {
             });
 
             // Since lumped accounts didn't post earlier, we handle them now
-            if (useLumpSetting(mappedAccountSetting)) {
+            if (shouldGroup(mappedAccountSetting)) {
               _.map(dateStrings, (dateString) => {
                 const rowsToProcess = workRowsByDate[dateString];
+                const totalDayMinutes = _.sum(
+                  _.map(rowsToProcess, (rtp) => rtp.timeSplitMinutes)
+                );
+                const roundingHoursForGrouping =
+                  getRoundingHoursForGrouping(mappedAccountSetting);
                 // Combine the entire day into a single row
                 const rowToPost = makePostableRow(
                   mappedAccountSetting.lumpSettings.title || "General Work",
-                  roundWorkMinutes(
-                    _.sum(_.map(rowsToProcess, (rtp) => rtp.timeSplitMinutes)),
-                    mappedAccountSetting.lumpSettings.hours * 60
-                  ),
+                  // We don't always want to round grouped hours
+                  roundingHoursForGrouping
+                    ? roundWorkMinutes(
+                        totalDayMinutes,
+                        roundingHoursForGrouping * 60
+                      )
+                    : totalDayMinutes,
                   "\r\n" + dateNotes[dateString],
                   rowsToProcess[0].taskDate,
                   mappedAccountSetting
@@ -149,7 +157,8 @@ if (program.settingsJSON) {
                   }
                   dateNotes[dateString] +=
                     taskTitle + ":" + taskDescription + "\r\n";
-                  if (useLumpSetting(accountSettings)) {
+                  if (shouldGroup(accountSettings)) {
+                    // IDK if I like this inside or outside the if. It will need to be moved if we want this info later
                     if (workRowsByDate[dateString]) {
                       workRowsByDate[dateString].push(parsedRow);
                     } else {
@@ -225,12 +234,20 @@ function makePostableRow(
   return rowToPost;
 }
 
-function useLumpSetting(accountSettings) {
+function shouldGroup(accountSettings) {
   return (
     accountSettings.lumpSettings &&
-    accountSettings.lumpSettings.hours &&
-    accountSettings.lumpSettings.hours > 0
+    ((accountSettings.lumpSettings.hours &&
+      accountSettings.lumpSettings.hours > 0) ||
+      (accountSettings.lumpSettings.title &&
+        accountSettings.lumpSettings.title.length > 0))
   );
+}
+
+function getRoundingHoursForGrouping(accountSettings) {
+  return accountSettings?.lumpSettings?.hours > 0
+    ? accountSettings?.lumpSettings?.hours
+    : null;
 }
 
 function isRowExcluded(parsedRow, accountSettings) {
