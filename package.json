@@ -6,14 +6,16 @@
     "lodash": "^4.17.21",
     "node-uuid": "^1.4.8",
     "request": "^2.88.2",
-    "timelog-bot": "^1.0.0",
     "xlsx": "^0.17.3"
+  },
+  "bin": {
+    "timelogbot": "index.mjs"
   },
   "devDependencies": {
     "@types/node": "^16.11.7"
   },
   "name": "timelog-bot",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
