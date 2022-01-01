@@ -26,6 +26,9 @@ if (program.settingsJSON) {
       process.cwd() + "/" + program.settingsJSON,
       "utf-8",
       function (err, settingsFileBuffer) {
+        if (err) {
+          console.log(err);
+        }
         settings = JSON.parse(settingsFileBuffer);
         console.log(settings);
         // Load the file
