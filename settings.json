@@ -1,16 +1,32 @@
 {
   "accountsToUse": [
     {
-      "accountName": "My sample account",
-      "accountId": "1234567",
-      "authorization": "Bearer blahblahblah",
-      "projectId": 12345678,
-      "taskId": 98765432,
-      "userId": 11223344,
+      "accountName": "Company A",
+      "accountId": "444222,",
+      "authorization": "Bearer foo",
+      "projectId": 1111111,
+      "taskId": 22222222,
+      "userId": 3333333,
       "url": "https://api.harvestapp.com/api/v2/time_entries",
       "type": "harvest",
       "excludeSheets": [],
-      "excludedTicketNames": []
+      "excludedTicketNames": [],
+      "lumpSettings": {
+        "hours": 4,
+        "title": "General Development"
+      }
+    },
+    {
+      "accountName": "Company B",
+      "accountId": "111222,",
+      "authorization": "Bearer baz",
+      "projectId": 4444444,
+      "taskId": 5555555,
+      "userId": 6666666,
+      "url": "https://api.harvestapp.com/api/v2/time_entries",
+      "type": "harvest",
+      "excludeSheets": [],
+      "excludedTicketNames": ["TES*"]
     }
   ]
 }
