@@ -56,4 +56,4 @@ Note that this was primarily tested in a Windows environment using a Git Bash te
           - For users who want to round their total daily hours.  The amount you enter here is the rounding point. It will always group and upload the logs in multiples of this size. So if it is 4, and your daily total is >= six hours, it will round it to eight hours.  Anything less and it will go to four hours.  If you would be to set it to one hour, then it would always round up or down to the nearest hour (5.75 -> 6, 8.25 -> 8 etc)
           
         "title": "General Development"
-          - The task title given for the grouped entry activity. This is not required for rounded grouping, but if you do not wish to round/lump your time, then a title should be provided so the script knows to group.
+          - The task title given for the grouped entry activity. This is not required for rounded grouping, but if you do not wish to round your time, then a title should be provided so the script knows to group.
