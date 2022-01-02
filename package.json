@@ -15,7 +15,7 @@
     "@types/node": "^16.11.7"
   },
   "name": "timelog-bot",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "index.mjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
