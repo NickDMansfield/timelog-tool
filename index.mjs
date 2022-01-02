@@ -1,5 +1,4 @@
-#!/bin/sh
-":"; //# comment; exec /usr/bin/env node --harmony "$0" "$@"
+#!/usr/bin/env node
 
 import xlsx from "async-xlsx";
 import program from "commander";
