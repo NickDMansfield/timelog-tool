@@ -1,5 +1,5 @@
 #!/bin/sh
-":"; //# comment; exec /usr/bin/env node --harmony "$0" "$@"
+":"; //# comment; exec /usr/bin/env -S node --harmony "$0" "$@"
 
 import xlsx from "async-xlsx";
 import program from "commander";
@@ -13,6 +13,18 @@ import fs from "fs";
 function excelDate(excelDate) {
   return new Date((excelDate - (25567 + 1)) * 86400 * 1000);
 }
+
+function getCommandArg(_argName) {
+  // This is a stupid function, but for some reason commander loads the
+  //  params in _optionValues when routed through the shebang command
+  if (program[_argName]) {
+    return program[_argName];
+  }
+  if (program._optionValues && program._optionValues[_argName]) {
+    return program._optionValues[_argName];
+  }
+  return null;
+}
 program
   .version("0.0.1")
   .option("-J, --settingsJSON <settingsJSON>", "settings JSON file")
@@ -22,10 +34,11 @@ program
 // Load settings
 
 let settings = {};
-if (program.settingsJSON) {
+console.log(program);
+if (getCommandArg("settingsJSON")) {
   try {
     fs.readFile(
-      process.cwd() + "/" + program.settingsJSON,
+      process.cwd() + "/" + getCommandArg("settingsJSON"),
       "utf-8",
       function (err, settingsFileBuffer) {
         if (err) {
@@ -34,7 +47,7 @@ if (program.settingsJSON) {
         settings = JSON.parse(settingsFileBuffer);
         console.log(settings);
         // Load the file
-        const filePath = process.cwd() + "/" + program.source;
+        const filePath = process.cwd() + "/" + getCommandArg("source");
         xlsx.parseFileAsync(filePath, {}, (workbookData) => {
           const wbData = JSON.parse(JSON.stringify(workbookData));
           // Result is a 2D array with an object with name/data props for each worksheet
@@ -88,7 +101,7 @@ if (program.settingsJSON) {
                 console.log(xlsxBuffer);
                 // TODO: Replace this with filepath when the formatting is fixed
                 fs.writeFile(
-                  process.cwd() + "/zzz" + program.source,
+                  process.cwd() + "/zzz" + getCommandArg("source"),
                   xlsxBuffer,
                   () => {
                     console.log("done");
