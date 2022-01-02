@@ -284,6 +284,8 @@ function isRowExcluded(parsedRow, accountSettings) {
         stringToSearch = stringToSearch.substring(0, endIndex);
         console.log("string:" + stringToSearch);
         console.log(parsedRow.taskTitle);
+        // TODO: Fix Wildcard filtration.  Right now TES is the same as TES* and TES*T.
+        //  That is obviously stupid and wrong lol
         if (
           stringToSearch.length > 0 &&
           parsedRow.taskTitle
